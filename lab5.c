@@ -11,9 +11,7 @@
 #define BACKSPACE 0x8 // ASCII backspace character code
 #define BUF_SIZE 128 
 
-char name[] = “A”; // change this to your name 
 char buffer[BUF_SIZE]; // buffer to store received string 
-int index; // index of buffer
 
 void initU1(void) { 
 	U1BRG = BRATE; // set baud rate 
@@ -72,17 +70,17 @@ char *getsnU1(char *s, int len) {
 }
 
 void _ISR _U1RXInterrupt(void) {
-  	// Hàm ngắt nhận UART
-  	//getsnU1(s, BUF_SIZE); // Nhận chuỗi từ UART vào biến s
-	buffer = getsnU1(buffer, BUF_SIZE);
+  	
+	getsnU1(buffer, BUF_SIZE);
 
   	if (strcmp(buffer, "Hello") == 0) { // So sánh chuỗi với "Hello"
-   		putsU1("My name is TRINH DINH THANH"); // Gửi tên sinh viên
-    	//putsU1(name); 
-    	putU1('\r'); // Gửi ký tự kết thúc dòng
-  	} else { // Nếu khác, gửi lại chuỗi "I do not know"
-    	putsU1("I do not know");
-    	putU1('\r'); // Gửi ký tự kết thúc dòng
+   		putsU1("\nMy name is TRINH DINH THANH\n"); // Gửi tên sinh viên
+    	 
+    	putU1(0x0d); 
+  	} else { 
+    	putsU1("\nI do not know\n");
+    	putU1(0x0d); 
+
   	}
 
   	IFS0bits.U1RXIF = 0; // Xóa cờ ngắt
@@ -194,37 +192,37 @@ char *getsnU1(char *s, int len) {
   	char *p = s; // Sao chép con trỏ chuỗi
   	int cc = 0; // Đếm số ký tự đã nhận
   	do {
-    		*s = getU1(); // Nhận một ký tự mới
-    		if ((*s == BACKSPACE)&&(s > p)) {
-      			putU1(' '); // Ghi đè lên ký tự cuối cùng
-      			putU1(BACKSPACE);
-      			len++;
-      			s--; // Giảm con trỏ chuỗi xuống một đơn vị
-      			continue;
-    		}
-    		if (*s == '\n') // Ký tự xuống dòng, bỏ qua
+    	*s = getU1(); // Nhận một ký tự mới
+    	if ((*s == BACKSPACE)&&(s > p)) {
+      		putU1(' '); // Ghi đè lên ký tự cuối cùng
+      		putU1(BACKSPACE);
+      		len++;
+      		s--; // Giảm con trỏ chuỗi xuống một đơn vị
       		continue;
-    		if (*s == '\r') // Ký tự kết thúc dòng, kết thúc vòng lặp
+    	}
+    	if (*s == '\n') // Ký tự xuống dòng, bỏ qua
+      		continue;
+    	if (*s == '\r') // Ký tự kết thúc dòng, kết thúc vòng lặp
       		break;
-    		s++; // Tăng con trỏ chuỗi lên một đơn vị
-    		len--;
+    	s++; // Tăng con trỏ chuỗi lên một đơn vị
+    	len--;
   	} while (len > 1); // Cho đến khi đầy bộ đệm
   	*s = '\0'; // Thêm ký tự kết thúc chuỗi
-  	return p; // Trả về con trỏ chuỗi
+  	return p; 
 }
 
 void _ISR _U1RXInterrupt(void) {
   	// Hàm ngắt nhận UART
-  	getsnU1(s, BUF_SIZE); // Nhận chuỗi từ UART vào biến s
+  	buffer = getsnU1(buffer, BUF_SIZE); // Nhận chuỗi từ UART vào biến s
 
-  	if (strcmp(s, "temperature") == 0) { // So sánh chuỗi với "Hello"
-   		putsU1("My name is "); // Nếu giống, gửi lại chuỗi "My name is "
-    	putU1('\r'); // Gửi ký tự kết thúc dòng
+  	if (strcmp(buffer, "temperature") == 0) {
+   		putsU1("Dang lay mau: "); 
+    	putU1('\r'); 
 
 		_SAMP = 1;
   	} else { 
     	putsU1("I do not know");
-    	putU1('\r'); // Gửi ký tự kết thúc dòng
+    	putU1('\r'); 
   	}
 
   	IFS0bits.U1RXIF = 0; // Xóa cờ ngắt
@@ -233,7 +231,7 @@ void main() {
 	
 	Init_ADCInterrupt();
 	initU1();
-	// Init_T1Interrupt();
+	
 
 	while(1);
 }
