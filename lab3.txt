@@ -1,0 +1,51 @@
+#include "xc.h" 
+#include <p24fj1024gb610.h> 
+#define POT 4 // 10k potentiometer connected to AN5 input 
+#define AINPUTS 0xffef // Analog inputs for Explorer16 POT 
+
+void Timer1_Init(){ 
+    T1CON = 0x00; 
+    TMR1 = 0x00;  
+    PR1 = 15625;     
+    T1CONbits.TCS = 0; 
+    T1CONbits.TCKPS = 2;   
+    T1CONbits.TON = 1; 
+}
+ 
+void initADC(int pinNumber) { 
+   	 ANSB = pinNumber; 
+   	 _SSRC = 0x7; 
+   	 AD1CSSL = 0;  
+   	 AD1CON2 = 0;  
+   	 AD1CON3 = 0x1F02;  
+   	 _ADON = 1;  
+}  
+ 
+ 
+int readADC(int ch) { 
+   	 AD1CHS = ch;  
+   	 _SAMP = 1;  
+   	 while (_DONE == 1); //AD1CON1bits.DONE 
+	return ADC1BUF0; 
+}
+ main (){
+	ANSA = 0; 
+    	TRISA = 0;    
+   	ANSD = 0;
+
+	int a;
+ 	initADC( AINPUTS);
+ 	TRISA = 0;
+
+	Timer1_Init();
+ 	while(1){
+ 		
+		if (TMR1 == PR1) {
+			a = readADC( POT);
+ 			a = (a - 500) / 10
+			PORTA = a;
+			TMR1 = 0;
+		}
+	
+ } 
+}

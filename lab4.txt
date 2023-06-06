@@ -1,0 +1,99 @@
+1. Cấu hình PIC24/32 để thực hiện ngắt trên Timer1 để bật tắt led sau mỗi 500 ms.
+#include "xc.h"
+#include <p24fj1024gb610.h>
+
+void Timer1_Init() {
+	T1CON = 0; // clear timer 1 control register
+	TMR1 = 0; // clear timer 1 register
+	PR1 = 31250; // set timer 1 period to 500 ms (assuming Fcy = 16 MHz)
+	T1CONbits.TCS = 0;
+	T1CONbits.TCKPS = 2;
+	T1CONbits.TON = 1; // turn on timer 1
+}
+
+void Init_Timer1_Interrupt(void) {
+	_T1IP = 6; // set timer 1 interrupt priority to 6
+	_T1IF = 0; // clear timer 1 interrupt flag
+	_T1IE = 1; // enable timer 1 interrupt
+}
+
+void _ISR _T1Interrupt(void) {
+  	PORTA = ~PORTA; // toggle led on RA0
+  	_T1IF = 0; // clear timer 1 interrupt flag
+}
+
+int main() {
+	ANSA = 0; // set PORTA as digital
+  	TRISA = 0; // set PORTA as output
+  	PORTA = 0; // clear PORTA
+
+	Timer1_Init();
+  	Init_Timer1_Interrupt(); // initialize timer 1 interrupt
+  	while (1); // infinite loop
+  	return 0;
+}
+
+2. Cấu hình PIC24/32 để thực hiện ngắt trên ADC để đọc giá trị của cảm biến nhiệt độ và ghi ra LED. 
+
+#include <xc.h>
+#include <p24fj1024gb610>
+
+
+#define POT 4
+#define AINPUTS 0xfff7
+
+void Init_T1Interrupt(void){
+	T1CON = 0;
+	TMR1 = 0;
+	PR1 = 31250;
+	T1CONbits.TCS = 0;
+	T1CONbits.TCKPS = 2;
+
+	_T1IF = 0;
+	_T1IE = 1;
+	_T1IP = 1;
+
+	T1CONbits.TON = 1;
+}
+
+void _ISR _T1Interrupt(void) {
+	_SAMP = 1;
+	IFS0bits.T1IF = 0;
+	TMR1 = 0;
+}
+
+void Init_ADCInterrupt(void) {
+	ANSB = 1;
+	AD1CHS = 4;
+	_SSRC = 0x7;
+	AD1CSSL = 0;
+	AD1CON2 = 0;
+	AD1CON3 = 0x1f02;
+	ADON = 1;
+
+	_AD1IF = 0;
+	AD1CON5bits.ASINT = 3;
+	_AD1IE = 1;
+	_AD1IP = 1;
+}
+
+void _ISR _ADCInterrupt(void) {
+	int adcValue = ADC1BUF0;
+	float temp, vol;
+	vol = (adcValue * 3.3) / 1024;
+	temp = (vol - 0.5) * 0.01;
+	PORTA = (int) temp;
+
+	_AD1IF = 0;
+}
+
+
+void main() {
+	TRISA = 0;
+	ANSA = 0;
+	PORTA = 0;
+	Init_ADCInterrupt();
+	Init_T1Interrupt();
+
+	while(1);
+}
