@@ -143,7 +143,8 @@ void LCD_PutString(char* inputString, uint16_t length) {
 } 
 
 void initADC(int pinNumber) { 
-    ANSB = pinNumber; 
+    ANSB = 4; 
+    AD1CHS = 4;
     _SSRC = 0x7; 
     AD1CSSL = 0;  
     AD1CON2 = 0;  
@@ -151,45 +152,59 @@ void initADC(int pinNumber) {
     _ADON = 1;  
 } 
 
-void Init_ADCInterrupt(void) {
-	ANSB = 1;
-	AD1CHS = 4;
-	_SSRC = 0x7;
-	AD1CSSL = 0;
-	AD1CON2 = 0;
-	AD1CON3 = 0x1f02;
-	ADON = 1;
+void initInterrupt(void) {
+    T1CON = 0;
+    TMR1 = 0;
+    PR1 = 31250;
+    T1CONbits.TCS = 0;
+    T1CONbits.TCKPS = 2;
 
+    // Configure Timer Interrupt
+	_T1IF = 0;
+    _T1IE = 1;
+    _T1IP = 1;
+
+    // Configure ADC Interrupt
 	_AD1IF = 0;
 	AD1CON5bits.ASINT = 3;
 	_AD1IE = 1;
 	_AD1IP = 1;
 } 
 
-int readADC(int ch) {
-    AD1CHS = ch;
+void _ISR _T1Interrupt(void) {
     _SAMP = 1;
-    while(_DONE == 1);
-    return ADC1BUF0;
+    IFS0bits.T1IF = 0;
+    TMR1 = 0;
 }
  
 void _ISR _ADCInterrupt(void) {
-	int a;
-    a = readADC(POT);
-    a >>= 7;
-    a = 0x80 >> a;
-    LCD_PutString("ADC la: ", 8);
-    char* strValue = (char*)a;
-    LCD_PutString(strValue, strlen(strValue)); 
-    LCD_PutString(" V", 2);
-    
-	_AD1IF = 0;
+	int adcValue = ADC1BUF0;
+    float temp, voltage;
+
+    voltage = (adcValue * 3.3) / 1024;
+    temp = (voltage - 0.5) / 0.01;
+    int donVi = ((int)temp) % 10 + 48;
+    int chuc = ((int)temp / 10) + 48;
+    int thapPhan = ((int) (temp * 10) % 10) + 48;
+    int doC = 223;
+
+    LCD_PutString("Nhiet do: ", 10);
+    delay_48us();
+    LCD_PutChar(chuc);
+    LCD_PutChar(donVi);
+    LCD_PutString(".", 1);
+    LCD_PutChar(doC);
+    LCD_PutString("C", 1);
+    LCD_CMD(LCD_COMMAND_RETURN_HOME);
+    delay_162us();
+
+    IFS0bits.AD1IF = 0;
 }
  
 int main(void) { 
     LCDinit(); 
-    //initADC(AINPUTS); 
-    Init_ADCInterrupt(); 
+    initADC(); 
+    initInterrupt();
     
     while (1);           
     return 0;
